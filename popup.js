@@ -67,10 +67,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Создание PDF
-    const pdf = new jsPDF();
+    const pdf = new jsPDF({
+      orientation: 'landscape', // Альбомная ориентация
+      unit: 'mm',              // Единицы измерения (миллиметры)
+      format: 'a4'             // Формат страницы (A4)
+    });
+    
     screenshots.forEach((dataUrl, index) => {
       if (index !== 0) pdf.addPage();
-      pdf.addImage(dataUrl, 'PNG', 10, 10, 190, 0);
+      pdf.addImage(dataUrl, 'PNG', 10, 10, 277, 0); // Ширина 277 мм для A4 в альбомной ориентации
     });
 
     // Создание архива
