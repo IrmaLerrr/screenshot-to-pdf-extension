@@ -7,12 +7,17 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <button id="start-report">Начать формирование отчета</button>
-  <button id="take-screenshot">Создать скриншот</button>
-  <button id="finish-report">Завершить формирование отчета</button>
-  <!-- <script src="jspdf.min.js"></script> -->
+  <div class="container">
+    <div class="input-group">
+      <label for="report-name">Название отчета:</label>
+      <input type="text" id="report-name" placeholder="Введите название">
+    </div>
+    <button id="start-report">Начать формирование отчета</button>
+    <button id="take-screenshot" disabled>Создать скриншот</button>
+    <button id="finish-report" disabled>Завершить формирование отчета</button>
+  </div>
   <script src="jspdf.umd.min.js"></script>
+  <script src="jszip.min.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
-

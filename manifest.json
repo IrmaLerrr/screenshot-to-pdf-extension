@@ -1,22 +1,32 @@
 {
-    "manifest_version": 3,
-    "name": "Screenshot to PDF",
-    "version": "1.0",
-    "description": "Расширение для создания скриншотов и формирования PDF-отчета.",
-    "permissions": [
-      "activeTab",
-      "storage",
-      "downloads"
-    ],
-    "action": {
-      "default_popup": "popup.html",
-      "default_icon": {
-        "16": "icon16.png",
-        "48": "icon48.png",
-        "128": "icon128.png"
-      }
-    },
-    "background": {
-      "service_worker": "background.js"
+  "manifest_version": 3,
+  "name": "Screenshot to PDF",
+  "version": "1.0",
+  "description": "Расширение для создания скриншотов и формирования PDF-отчета.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "downloads",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "commands": {
+    "take-screenshot": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Z",
+        "mac": "Command+Shift+Z" 
+      },
+      "description": "Создать скриншот"
     }
   }
+}

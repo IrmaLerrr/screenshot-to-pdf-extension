@@ -1,56 +1,92 @@
-document.getElementById('start-report').addEventListener('click', () => {
-    chrome.storage.local.set({ screenshots: [] }, () => {
-      alert('Начато формирование отчета. Скриншоты будут сохранены.');
-    });
-  });
-  
-  document.getElementById('take-screenshot').addEventListener('click', () => {
-    chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
-      chrome.storage.local.get(['screenshots'], (result) => {
-        const screenshots = result.screenshots || [];
-        screenshots.push(dataUrl);
-        chrome.storage.local.set({ screenshots }, () => {
-          alert('Скриншот сохранен.');
-        });
-      });
-    });
-  });
-  
-  document.addEventListener('DOMContentLoaded', () => {
-    // Проверка, что библиотека загружена
-    if (typeof window.jspdf === 'undefined') {
-      console.error('Ошибка: Библиотека jsPDF не загружена.');
-      alert('Ошибка: Библиотека jsPDF не загружена.');
+document.addEventListener('DOMContentLoaded', () => {
+  const { jsPDF } = window.jspdf;
+  const reportNameInput = document.getElementById('report-name');
+  const startReportButton = document.getElementById('start-report');
+  const takeScreenshotButton = document.getElementById('take-screenshot');
+  const finishReportButton = document.getElementById('finish-report');
+
+  let reportName = '';
+  let screenshots = [];
+
+  // Начало формирования отчета
+  startReportButton.addEventListener('click', () => {
+    reportName = reportNameInput.value.trim();
+    if (!reportName) {
+      alert('Введите название отчета.');
       return;
     }
-  
-    const { jsPDF } = window.jspdf; // Доступ к jsPDF из UMD-версии
-  
-    // Ваш код
-    document.getElementById('finish-report').addEventListener('click', () => {
-      chrome.storage.local.get(['screenshots'], (result) => {
-        const screenshots = result.screenshots || [];
-        if (screenshots.length === 0) {
-          alert('Нет скриншотов для создания отчета.');
-          return;
+
+    screenshots = [];
+    chrome.storage.local.set({ screenshots: [] }, () => {
+      // Активируем кнопку "Создать скриншот"
+      takeScreenshotButton.disabled = false;
+      // Деактивируем кнопку "Завершить формирование отчета"
+      finishReportButton.disabled = true;
+      alert('Начато формирование отчета. Теперь вы можете создавать скриншоты.');
+    });
+  });
+
+  // Создание скриншота
+  takeScreenshotButton.addEventListener('click', () => {
+    chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+      screenshots.push(dataUrl);
+      chrome.storage.local.set({ screenshots }, () => {
+        // Активируем кнопку "Завершить формирование отчета" после первого скриншота
+        if (screenshots.length === 1) {
+          finishReportButton.disabled = false;
         }
-  
-        const pdf = new jsPDF();
-        screenshots.forEach((dataUrl, index) => {
-          if (index !== 0) pdf.addPage();
-          pdf.addImage(dataUrl, 'PNG', 10, 10, 190, 0);
-        });
-  
-        const pdfBlob = pdf.output('blob');
-        const url = URL.createObjectURL(pdfBlob);
-        chrome.downloads.download({
-          url: url,
-          filename: 'report.pdf'
-        }, () => {
-          chrome.storage.local.set({ screenshots: [] }, () => {
-            alert('Отчет успешно создан и загружен.');
-          });
+        alert('Скриншот сохранен.');
+      });
+    });
+  });
+
+  // Завершение формирования отчета
+  finishReportButton.addEventListener('click', () => {
+    if (screenshots.length === 0) {
+      alert('Нет скриншотов для создания отчета.');
+      return;
+    }
+
+    // Создание PDF
+    const pdf = new jsPDF();
+    screenshots.forEach((dataUrl, index) => {
+      if (index !== 0) pdf.addPage();
+      pdf.addImage(dataUrl, 'PNG', 10, 10, 190, 0);
+    });
+
+    // Создание архива
+    const zip = new JSZip();
+    const pdfBlob = pdf.output('blob');
+    zip.file(`${reportName}.pdf`, pdfBlob);
+
+    screenshots.forEach((dataUrl, index) => {
+      const imgBlob = dataURLtoBlob(dataUrl);
+      zip.file(`screenshot_${index + 1}.png`, imgBlob);
+    });
+
+    zip.generateAsync({ type: 'blob' }).then((content) => {
+      const url = URL.createObjectURL(content);
+      chrome.downloads.download({
+        url: url,
+        filename: `${reportName}.zip`
+      }, () => {
+        chrome.storage.local.set({ screenshots: [] }, () => {
+          alert('Отчет успешно создан и загружен.');
         });
       });
     });
   });
+
+  // Преобразование Data URL в Blob
+  function dataURLtoBlob(dataUrl) {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  }
+});
