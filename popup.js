@@ -8,6 +8,22 @@ document.addEventListener('DOMContentLoaded', () => {
   let reportName = '';
   let screenshots = [];
 
+  // Загрузка состояния при открытии popup
+  chrome.storage.local.get(['reportName', 'screenshots'], (result) => {
+    reportName = result.reportName || '';
+    screenshots = result.screenshots || [];
+
+    // Восстановление состояния
+    reportNameInput.value = reportName;
+    updateButtonsState();
+  });
+
+  // Обновление состояния кнопок
+  function updateButtonsState() {
+    takeScreenshotButton.disabled = !reportName;
+    finishReportButton.disabled = screenshots.length === 0;
+  }
+
   // Начало формирования отчета
   startReportButton.addEventListener('click', () => {
     reportName = reportNameInput.value.trim();
@@ -17,27 +33,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     screenshots = [];
-    chrome.storage.local.set({ screenshots: [] }, () => {
-      // Активируем кнопку "Создать скриншот"
-      takeScreenshotButton.disabled = false;
-      // Деактивируем кнопку "Завершить формирование отчета"
-      finishReportButton.disabled = true;
-      alert('Начато формирование отчета. Теперь вы можете создавать скриншоты.');
+    chrome.storage.local.set({ reportName, screenshots }, () => {
+      updateButtonsState();
+      alert('Начато формирование отчета. Используйте Ctrl+Shift+Z для создания скриншотов.');
     });
   });
 
-  // Создание скриншота
+  // Создание скриншота через кнопку
   takeScreenshotButton.addEventListener('click', () => {
     chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
       screenshots.push(dataUrl);
       chrome.storage.local.set({ screenshots }, () => {
-        // Активируем кнопку "Завершить формирование отчета" после первого скриншота
-        if (screenshots.length === 1) {
-          finishReportButton.disabled = false;
-        }
-        alert('Скриншот сохранен.');
+        updateButtonsState();
+        // alert('Скриншот сохранен.');
       });
     });
+  });
+
+  // Создание скриншота через горячую клавишу
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes.screenshots) {
+      screenshots = changes.screenshots.newValue || [];
+      updateButtonsState();
+      // alert('Скриншот сохранен.');
+    }
   });
 
   // Завершение формирования отчета
@@ -70,8 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
         url: url,
         filename: `${reportName}.zip`
       }, () => {
-        chrome.storage.local.set({ screenshots: [] }, () => {
+        chrome.storage.local.set({ reportName: '', screenshots: [] }, () => {
           alert('Отчет успешно создан и загружен.');
+          updateButtonsState();
         });
       });
     });
